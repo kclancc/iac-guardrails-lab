@@ -35,6 +35,7 @@ jobs:
           report_formats: sarif
           output_path: fcs-report.json      # action rewrites .json here, then converts to fcs-report.sarif alongside
           fail_on: high=1,critical=1
+          exclude_severities: medium,informational   # keep the report focused on merge-blocking findings
         env:
           FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
 
