@@ -39,16 +39,21 @@ jobs:
         env:
           FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
 
-      - name: Render SARIF as Markdown
-        if: always()
-        run: python3 scripts/sarif-to-md.py fcs-report.sarif pr-comment.md
-
-      - name: Post/update sticky PR comment
-        if: always() && github.event_name == 'pull_request'
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          header: fcs-iac                 # sticky comment key -- updates in place
-          path: pr-comment.md
+      # Demo variant: GHAS-only path (no sticky PR comment).
+      # This branch simulates a repo that relies entirely on GitHub Advanced
+      # Security's inline annotations for reviewer feedback. Comment out the
+      # render + sticky steps so nothing posts to the Conversation tab.
+      #
+      # - name: Render SARIF as Markdown
+      #   if: always()
+      #   run: python3 scripts/sarif-to-md.py fcs-report.sarif pr-comment.md
+      #
+      # - name: Post/update sticky PR comment
+      #   if: always() && github.event_name == 'pull_request'
+      #   uses: marocchino/sticky-pull-request-comment@v2
+      #   with:
+      #     header: fcs-iac                 # sticky comment key -- updates in place
+      #     path: pr-comment.md
 
       - name: Upload SARIF to GitHub Code Scanning (GHAS only)
         if: always()
