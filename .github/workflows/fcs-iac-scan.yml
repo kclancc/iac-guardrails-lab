@@ -26,7 +26,6 @@ jobs:
 
       - name: Run FCS IaC scan
         id: scan
-        continue-on-error: true    # always render the comment, even on findings
         uses: crowdstrike/fcs-action@v5.0.2
         with:
           falcon_client_id: ${{ secrets.FALCON_CLIENT_ID }}
@@ -59,7 +58,7 @@ jobs:
           category: FCS
 
       - name: Fail job on high-severity findings
-        if: steps.scan.outcome == 'failure'
+        if: steps.scan.outputs.exit-code != '0'
         run: |
           echo "::error::FCS IaC scan found high-severity issues. See sticky PR comment."
           exit 1

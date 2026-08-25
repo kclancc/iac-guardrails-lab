@@ -12,6 +12,7 @@ import json
 import sys
 from collections import Counter
 from pathlib import Path
+from urllib.parse import unquote
 
 SEVERITY_ORDER = {"error": 0, "warning": 1, "note": 2, "none": 3}
 SEVERITY_ICON = {"error": "🔴", "warning": "🟡", "note": "🔵", "none": "⚪"}
@@ -32,7 +33,7 @@ def load_results(sarif_path: Path) -> list[dict]:
             help_uri = r.get("helpUri") or rule.get("helpUri")
             locs = r.get("locations") or [{}]
             physical = locs[0].get("physicalLocation", {})
-            uri = physical.get("artifactLocation", {}).get("uri", "?")
+            uri = unquote(physical.get("artifactLocation", {}).get("uri", "?"))
             region = physical.get("region", {}) or {}
             line = region.get("startLine", "?")
             results.append(
