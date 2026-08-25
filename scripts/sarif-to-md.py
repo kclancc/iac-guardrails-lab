@@ -14,8 +14,32 @@ from collections import Counter
 from pathlib import Path
 from urllib.parse import unquote
 
-SEVERITY_ORDER = {"error": 0, "warning": 1, "note": 2, "none": 3}
-SEVERITY_ICON = {"error": "🔴", "warning": "🟡", "note": "🔵", "none": "⚪"}
+SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "informational": 4, "unknown": 5}
+SEVERITY_ICON = {
+    "critical": "🔴",
+    "high": "🔴",
+    "medium": "🟡",
+    "low": "🔵",
+    "informational": "⚪",
+    "unknown": "⚪",
+}
+
+
+def score_to_severity(score_str: str) -> str:
+    """Map security-severity numeric string (GitHub CVSS convention) to a label."""
+    try:
+        score = float(score_str)
+    except (TypeError, ValueError):
+        return "unknown"
+    if score >= 9.0:
+        return "critical"
+    if score >= 7.0:
+        return "high"
+    if score >= 4.0:
+        return "medium"
+    if score > 0:
+        return "low"
+    return "informational"
 
 
 def load_results(sarif_path: Path) -> list[dict]:
@@ -29,6 +53,18 @@ def load_results(sarif_path: Path) -> list[dict]:
             level = r.get("level", "warning")
             rule_id = r.get("ruleId", "")
             rule = rules.get(rule_id, {})
+            severity = "unknown"
+            rule_props = rule.get("properties", {}) or {}
+            if "security-severity" in rule_props:
+                severity = score_to_severity(rule_props["security-severity"])
+            if severity == "unknown":
+                # Fall back to SARIF level when the rule doesn't carry a score.
+                severity = {
+                    "error": "high",
+                    "warning": "medium",
+                    "note": "low",
+                    "none": "informational",
+                }.get(level, "unknown")
             msg = r.get("message", {}).get("text") or rule.get("shortDescription", {}).get("text", "")
             help_uri = r.get("helpUri") or rule.get("helpUri")
             locs = r.get("locations") or [{}]
@@ -38,7 +74,7 @@ def load_results(sarif_path: Path) -> list[dict]:
             line = region.get("startLine", "?")
             results.append(
                 {
-                    "level": level,
+                    "severity": severity,
                     "rule_id": rule_id,
                     "message": msg,
                     "file": uri,
@@ -57,13 +93,13 @@ def render(results: list[dict]) -> str:
             "resources pass the current FCS policy set.\n"
         )
 
-    counts = Counter(r["level"] for r in results)
+    counts = Counter(r["severity"] for r in results)
     summary_parts = []
-    for level in ("error", "warning", "note"):
+    for level in ("critical", "high", "medium", "low", "informational"):
         if counts.get(level):
             summary_parts.append(f"{SEVERITY_ICON[level]} {counts[level]} {level}")
 
-    results.sort(key=lambda r: (SEVERITY_ORDER.get(r["level"], 99), r["file"], r["line"]))
+    results.sort(key=lambda r: (SEVERITY_ORDER.get(r["severity"], 99), r["file"], r["line"]))
 
     lines = [
         "### Falcon Cloud Security — IaC Scan",
@@ -74,11 +110,11 @@ def render(results: list[dict]) -> str:
         "| --- | --- | --- | --- |",
     ]
     for r in results:
-        icon = SEVERITY_ICON.get(r["level"], "⚪")
+        icon = SEVERITY_ICON.get(r["severity"], "⚪")
         loc = f"`{r['file']}:{r['line']}`"
         rule = f"[`{r['rule_id']}`]({r['help_uri']})" if r["help_uri"] else f"`{r['rule_id']}`"
         msg = r["message"].replace("|", "\\|").replace("\n", " ")
-        lines.append(f"| {icon} {r['level']} | {loc} | {rule} | {msg} |")
+        lines.append(f"| {icon} {r['severity']} | {loc} | {rule} | {msg} |")
 
     lines.extend(
         [
