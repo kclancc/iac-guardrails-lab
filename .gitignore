@@ -7,6 +7,7 @@
 
 # FCS scan artifacts
 fcs-report.sarif
+fcs-report.json
 pr-comment.md
 
 # Editor / OS
