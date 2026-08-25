@@ -36,6 +36,7 @@ jobs:
           report_formats: sarif
           output_path: fcs-report.sarif
           fail_on: high=1,critical=1
+          verbose: true
         env:
           FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
 
