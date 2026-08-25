@@ -14,3 +14,6 @@ pr-comment.md
 .idea/
 .vscode/
 *.swp
+
+# Local-only demo snippets (paste into demo PRs, never committed to main)
+demo-snippets/

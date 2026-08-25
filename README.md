@@ -24,9 +24,12 @@ status rather than a wall of comments.
 ```
 .github/workflows/fcs-iac-scan.yml   # the GHA workflow
 scripts/sarif-to-md.py               # SARIF -> Markdown renderer
-terraform/aws/                       # sample AWS Terraform (with intentional misconfigs)
-terraform/azure/                     # sample Azure Terraform (with intentional misconfigs)
+terraform/aws/                       # baseline AWS Terraform (VPC + subnet)
+terraform/azure/                     # placeholder for Azure resources
 ```
+
+`main` is intentionally clean. Findings are introduced through pull requests
+by adding or modifying files under `terraform/`.
 
 ## Required secrets
 
@@ -49,9 +52,9 @@ button greys out.
 
 ## Demo flow
 
-1. Open a PR that lowers `min_tls_version` from `"1.2"` to `"1.0"` in
-   `terraform/azure/app_service.tf`, or opens UDP/636 in
-   `terraform/aws/attack_path.tf`.
+1. Open a PR that introduces a finding — for example, add an Azure App Service
+   resource with `min_tls_version = "1.0"`, or an AWS security group ingress
+   opening `0.0.0.0/0` on port 22.
 2. Wait for the FCS IaC Scan check to run (~30s).
 3. Show three tabs:
    - **Files changed** — inline annotations if GHAS is on

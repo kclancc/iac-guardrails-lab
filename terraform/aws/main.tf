@@ -1,7 +1,5 @@
-# AWS Terraform sample resources.
-#
-# NOTE: Some rules in this file are intentionally misconfigured to trigger
-# high-severity IaC findings. Do NOT apply this to a real account.
+# AWS Terraform baseline scaffolding — VPC + subnet.
+# Clean by design. Findings are introduced via pull requests.
 
 terraform {
   required_providers {
