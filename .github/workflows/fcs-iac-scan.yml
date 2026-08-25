@@ -24,31 +24,27 @@ jobs:
       - name: Checkout PR head
         uses: actions/checkout@v4
 
-      - name: Install FCS CLI
-        run: |
-          set -euo pipefail
-          curl -sSL https://falcon.crowdstrike.com/fcs-cli/install.sh | sh
-          echo "$HOME/.fcs/bin" >> "$GITHUB_PATH"
-
       - name: Run FCS IaC scan
         id: scan
         continue-on-error: true    # always render the comment, even on findings
+        uses: crowdstrike/fcs-action@v5.0.2
+        with:
+          falcon_client_id: ${{ secrets.FALCON_CLIENT_ID }}
+          falcon_region: ${{ secrets.FALCON_CLOUD }}
+          scan_type: iac
+          path: .
+          report_formats: sarif
+          output_path: fcs-report.sarif
+          fail_on: high=1,critical=1
         env:
-          FALCON_CLIENT_ID: ${{ secrets.FALCON_CLIENT_ID }}
           FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
-          FALCON_CLOUD: ${{ secrets.FALCON_CLOUD }}
-        run: |
-          fcs iac scan \
-            --path . \
-            --report-formats sarif \
-            --output-path fcs-report.sarif \
-            --fail-on-severity high
 
       - name: Render SARIF as Markdown
+        if: always()
         run: python3 scripts/sarif-to-md.py fcs-report.sarif pr-comment.md
 
       - name: Post/update sticky PR comment
-        if: github.event_name == 'pull_request'
+        if: always() && github.event_name == 'pull_request'
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: fcs-iac                 # sticky comment key -- updates in place
