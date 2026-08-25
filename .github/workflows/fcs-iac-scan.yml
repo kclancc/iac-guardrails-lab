@@ -50,13 +50,17 @@ jobs:
           header: fcs-iac                 # sticky comment key -- updates in place
           path: pr-comment.md
 
-      - name: Upload SARIF to GitHub Code Scanning (GHAS only)
-        if: always()
-        continue-on-error: true          # silently skip on non-GHAS repos
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: fcs-report.sarif
-          category: FCS
+      # Demo variant: sticky-comment-only path (no GHAS upload).
+      # This branch simulates a private / non-GHAS repo where inline
+      # annotations aren't available and reviewers rely on the sticky comment.
+      #
+      # - name: Upload SARIF to GitHub Code Scanning (GHAS only)
+      #   if: always()
+      #   continue-on-error: true          # silently skip on non-GHAS repos
+      #   uses: github/codeql-action/upload-sarif@v3
+      #   with:
+      #     sarif_file: fcs-report.sarif
+      #     category: FCS
 
       - name: Fail job on high-severity findings
         if: steps.scan.outputs.exit-code != '0'
