@@ -1,0 +1,69 @@
+name: FCS IaC Scan
+
+on:
+  pull_request:
+    paths:
+      - '**/*.tf'
+      - '**/*.tfvars'
+      - '**/*.yaml'
+      - '**/*.yml'
+      - '**/Dockerfile'
+      - '**/Dockerfile.*'
+
+jobs:
+  fcs-iac:
+    name: FCS IaC Scan
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write     # required to post the sticky PR comment
+      security-events: write   # required to upload SARIF to Code Scanning (GHAS)
+
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+
+      - name: Install FCS CLI
+        run: |
+          set -euo pipefail
+          curl -sSL https://falcon.crowdstrike.com/fcs-cli/install.sh | sh
+          echo "$HOME/.fcs/bin" >> "$GITHUB_PATH"
+
+      - name: Run FCS IaC scan
+        id: scan
+        continue-on-error: true    # always render the comment, even on findings
+        env:
+          FALCON_CLIENT_ID: ${{ secrets.FALCON_CLIENT_ID }}
+          FALCON_CLIENT_SECRET: ${{ secrets.FALCON_CLIENT_SECRET }}
+          FALCON_CLOUD: ${{ secrets.FALCON_CLOUD }}
+        run: |
+          fcs iac scan \
+            --path . \
+            --report-formats sarif \
+            --output-path fcs-report.sarif \
+            --fail-on-severity high
+
+      - name: Render SARIF as Markdown
+        run: python3 scripts/sarif-to-md.py fcs-report.sarif pr-comment.md
+
+      - name: Post/update sticky PR comment
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: fcs-iac                 # sticky comment key -- updates in place
+          path: pr-comment.md
+
+      - name: Upload SARIF to GitHub Code Scanning (GHAS only)
+        if: always()
+        continue-on-error: true          # silently skip on non-GHAS repos
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: fcs-report.sarif
+          category: FCS
+
+      - name: Fail job on high-severity findings
+        if: steps.scan.outcome == 'failure'
+        run: |
+          echo "::error::FCS IaC scan found high-severity issues. See sticky PR comment."
+          exit 1
